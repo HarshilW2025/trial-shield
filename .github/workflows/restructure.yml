@@ -1,0 +1,37 @@
+name: Restructure repository
+on:
+  push:
+    paths: ['.github/workflows/restructure.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  restructure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild the folder structure from the zips
+        run: |
+          set -e
+          unzip -q trial-shield-web-prototype.zip -d /tmp/w
+          unzip -q trial-shield-extension-and-bank.zip -d /tmp/e
+          W=/tmp/w/trial-shield-web-prototype
+          P=/tmp/e/trial-shield-extension-and-bank
+          for f in $(git ls-files); do
+            case "$f" in README.md|.github/*) ;; *) git rm -q "$f" ;; esac
+          done
+          mkdir -p web-prototype bank extension docs/screenshots
+          cp -r $W/. web-prototype/
+          cp -r $P/bank/. bank/
+          cp -r $P/extension/. extension/
+          cp $P/screenshots/*.png docs/screenshots/
+          sed 's#see README#see the main README#' $P/FEASIBILITY.md > docs/FEASIBILITY.md
+          cp $P/start-demo.command start-demo.command
+          printf '__pycache__/\n*.pyc\n.DS_Store\n' > .gitignore
+          find . -name __pycache__ -prune -exec rm -rf {} +
+          git add -A
+          git update-index --chmod=+x start-demo.command
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Restore folder structure: bank, extension, web-prototype, docs"
+          git push
